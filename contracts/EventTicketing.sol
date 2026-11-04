@@ -37,6 +37,7 @@ contract EventTicketing is ReentrancyGuard, Ownable {
     mapping(address => uint256[]) public userEvents;
     uint256 public eventCount;
     uint256 public totalRevenue;
+    mapping(uint256 => uint256) public eventRevenue;
 
     event EventCreated(uint256 indexed eid, address indexed organizer, string title, uint256 price, uint256 supply);
     event TicketBought(uint256 indexed eid, address indexed buyer, uint256 qty, uint256 paid);
@@ -47,6 +48,7 @@ contract EventTicketing is ReentrancyGuard, Ownable {
         require(totalTickets > 0, "Zero supply");
         require(pricePerTicket > 0, "Zero price");
         require(startTime < endTime, "Invalid time");
+        require(endTime > block.timestamp, "Event already ended");
         Event storage e = events.push();
         e.organizer = msg.sender;
         e.title = title;
@@ -69,6 +71,8 @@ contract EventTicketing is ReentrancyGuard, Ownable {
         Event storage e = events[eid];
         require(e.active, "Event inactive");
         require(!e.completed, "Event completed");
+        require(qty > 0, "Zero tickets");
+        require(block.timestamp < e.endTime, "Event ended");
         require(e.soldTickets + qty <= e.totalTickets, "Not enough tickets");
         uint256 cost = e.pricePerTicket * qty;
         require(msg.value == cost, "Incorrect payment");
@@ -76,6 +80,7 @@ contract EventTicketing is ReentrancyGuard, Ownable {
         e.active = e.soldTickets < e.totalTickets;
         tickets[eid][msg.sender] += qty;
         totalRevenue += cost;
+        eventRevenue[eid] += cost;
         emit TicketBought(eid, msg.sender, qty, cost);
     }
 
@@ -93,9 +98,9 @@ contract EventTicketing is ReentrancyGuard, Ownable {
     function withdrawRevenue(uint256 eid) external nonReentrant {
         Event storage e = events[eid];
         require(msg.sender == e.organizer, "Only organizer");
-        uint256 revenue = e.pricePerTicket * e.soldTickets;
+        uint256 revenue = eventRevenue[eid];
         require(revenue > 0, "No revenue to withdraw");
-        e.pricePerTicket = 0; // mark withdrawn so it can't be double-claimed
+        eventRevenue[eid] = 0;
         (bool ok,) = payable(e.organizer).call{value: revenue}("");
         require(ok, "ETH transfer failed");
     }
