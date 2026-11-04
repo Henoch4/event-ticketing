@@ -1,9 +1,9 @@
 {
-  "abiSource": "pending-current-source",
+  "abiSource": "runtime-matched-current-source",
   "repo": "stubhouse",
   "brand": "Stubhouse",
   "summary": "Buy tickets and inspect event availability directly on-chain.",
-  "address": null,
+  "address": "0xF33EF5cD94b3201C5071F6bF583DB21325218400",
   "owner": null,
   "abi": [
     {
